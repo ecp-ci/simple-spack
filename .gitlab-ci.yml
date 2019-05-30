@@ -1,0 +1,68 @@
+# This example shows usage of spack environments to build the proxy application
+# miniqmc.  This is an in place build, using an existing directory in the builders
+# $HOME directory.  It is a simple example using one build and one test stage.
+# spack builds miniqmc in the myminiqmc environment in the build stage, then in the
+# test stage the myminiqmc environment is activated and the miniqmc application is 
+# executed.  This shows that by activating the enviroment the path to miniqmc is set.
+stages:
+  - build
+  - test
+  
+.project_activation: &project_activation
+  # Will ensure that the CI pipeline will 'only' run when initiated via the
+  # the web GUI (CI / CD -> Pipelines -> Run Pipeline).
+  only:
+    - web
+
+before_script:
+  - export TERM=xterm
+  - source $HOME/spack/share/spack/setup-env.sh
+
+build_spack_batch:
+  # Similiar to past example we are leveraging the GitLab Batch runner and as
+  # such we will need to provide the job submission parameters.
+  # Adjust your SCHEDULER_PARAMETERS to your batch scheduler
+  variables:  
+    SCHEDULER_PARAMETERS: "-A Operations -n 1  -t 10 -q default"  
+  tags:
+    - CLE
+    - batch
+    - anl-theta-knl-001
+    - cray-xc40
+    - ecp-theta
+    - ecp
+    - cobalt
+    - test
+  <<: *project_activation
+
+  stage: build
+  script:
+    - spack --version
+    - spack env create myciminiqmc || echo "Spack env myciminiqmc already created"
+    - spack env activate myciminiqmc
+    - spack install miniqmc^cmake@3.6.0 ^mpich ^openblas@0.3.5
+
+# Use shared .test_spack_stage code and project activation code
+test_spack_batch:
+  variables:  
+    SCHEDULER_PARAMETERS: "-A Operations -n 1  -t 10 -q default"  
+  tags:
+    - CLE
+    - batch
+    - anl-theta-knl-001
+    - cray-xc40
+    - ecp-theta
+    - ecp
+    - cobalt
+    - test
+  <<: *project_activation
+  dependencies:
+    - build_spack_batch
+
+  stage: test
+  script:
+    - source $HOME/spack/share/spack/setup-env.sh
+    - spack env activate myciminiqmc
+    - which miniqmc
+    - which aprun
+    - aprun -n 2 `which miniqmc` < ./input_args
