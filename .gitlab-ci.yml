@@ -4,6 +4,8 @@
 # spack builds miniqmc in the myminiqmc environment in the build stage, then in the
 # test stage the myminiqmc environment is activated and the miniqmc application is 
 # executed.  This shows that by activating the enviroment the path to miniqmc is set.
+# This example is setup to run at ALCF.  To run elsewhere change the tags and variable
+# settings.
 stages:
   - build
   - test
